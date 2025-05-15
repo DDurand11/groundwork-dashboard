@@ -6,6 +6,17 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from supabase import create_client, Client
+
+# Replace with your actual URL and key
+SUPABASE_URL = "https://kijnzbskkxtglwkizgqh.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtpam56YnNra3h0Z2x3a2l6Z3FoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDczMDM4NDYsImV4cCI6MjA2Mjg3OTg0Nn0.k7QeiXhW-wPpqel_VQbgBAmiOPasl7X190Xjpmz9XgI"
+
+@st.cache_resource
+def load_supabase():
+    return create_client(SUPABASE_URL, SUPABASE_KEY)
+
+supabase = load_supabase()
 
 st.set_page_config(layout="wide")
 st.title("Groundwork Insole Dashboard – Research-Style Data")
@@ -20,6 +31,23 @@ uploaded_file = st.file_uploader("Upload a TG0-style insole CSV file", type="csv
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
     st.success("CSV successfully loaded!")
+# Save to Supabase
+if st.button("💾 Save this session to Supabase"):
+    response = supabase.table("sessions").insert({
+        "athlete_name": athlete_name,
+        "session_id": session_id,
+        "symmetry_index": round(symmetry.mean(), 2),
+        "rearfoot_load": round(100 * rearfoot / total, 1),
+        "midfoot_load": round(100 * midfoot / total, 1),
+        "forefoot_load": round(100 * forefoot / total, 1),
+        "toes_load": round(100 * toes / total, 1),
+        "summary_text": f"{athlete_name} - {sym_label} - {session_id} summary"
+    }).execute()
+
+    if response.data:
+        st.success("✅ Session saved to Supabase!")
+    else:
+        st.error("❌ Error saving session.")
 
     # Athlete info (mock demo)
     athlete_name = st.text_input("Athlete Name", "Demo Athlete")
