@@ -31,23 +31,7 @@ uploaded_file = st.file_uploader("Upload a TG0-style insole CSV file", type="csv
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
     st.success("CSV successfully loaded!")
-# Save to Supabase
-if st.button("💾 Save this session to Supabase"):
-    response = supabase.table("sessions").insert({
-        "athlete_name": athlete_name,
-        "session_id": session_id,
-        "symmetry_index": round(symmetry.mean(), 2),
-        "rearfoot_load": round(100 * rearfoot / total, 1),
-        "midfoot_load": round(100 * midfoot / total, 1),
-        "forefoot_load": round(100 * forefoot / total, 1),
-        "toes_load": round(100 * toes / total, 1),
-        "summary_text": f"{athlete_name} - {sym_label} - {session_id} summary"
-    }).execute()
 
-    if response.data:
-        st.success("✅ Session saved to Supabase!")
-    else:
-        st.error("❌ Error saving session.")
 
     # Athlete info (mock demo)
     athlete_name = st.text_input("Athlete Name", "Demo Athlete")
@@ -122,3 +106,20 @@ if st.button("💾 Save this session to Supabase"):
     """)
 else:
     st.info("Please upload a CSV file to begin.")
+# Save to Supabase
+if st.button("💾 Save this session to Supabase"):
+    response = supabase.table("sessions").insert({
+        "athlete_name": athlete_name,
+        "session_id": session_id,
+        "symmetry_index": round(symmetry.mean(), 2),
+        "rearfoot_load": round(100 * rearfoot / total, 1),
+        "midfoot_load": round(100 * midfoot / total, 1),
+        "forefoot_load": round(100 * forefoot / total, 1),
+        "toes_load": round(100 * toes / total, 1),
+        "summary_text": f"{athlete_name} - {sym_label} - {session_id} summary"
+    }).execute()
+
+    if response.data:
+        st.success("✅ Session saved to Supabase!")
+    else:
+        st.error("❌ Error saving session.")
