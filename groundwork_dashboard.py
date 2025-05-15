@@ -104,6 +104,72 @@ if uploaded_file is not None:
 
     👉 Consider monitoring future sessions for increasing asymmetry or persistent forefoot loading.
     """)
+# 🧩 Minute-by-Minute Performance Breakdown
+st.header("📈 Minute-by-Minute Performance Breakdown")
+
+sampling_rate = 100  # Hz
+block_duration = 60  # seconds
+samples_per_block = sampling_rate * block_duration
+n_blocks = df.shape[0] // samples_per_block
+
+# Blockwise analysis
+block_labels = []
+symmetry_scores = []
+total_loads = []
+forefoot_ratios = []
+rearfoot_ratios = []
+
+for i in range(n_blocks):
+    start = i * samples_per_block
+    end = (i + 1) * samples_per_block
+    block = df.iloc[start:end]
+
+    left = block["CapSense_0"] + block["CapSense_1"] + block["CapSense_2"]
+    right = block["CapSense_10"] + block["CapSense_11"]
+    symmetry = (right - left) / (right + left + 1e-5)
+    symmetry_scores.append(symmetry.mean())
+
+    pressure_cols = [col for col in block.columns if "CapSense" in col]
+    total_pressure = block[pressure_cols].sum(axis=1).sum()
+    total_loads.append(total_pressure)
+
+    frame_vals = block.iloc[samples_per_block // 2][pressure_cols].astype(float).values
+    grid = frame_vals.reshape((4, 3))
+    forefoot = grid[2, :].sum()
+    rearfoot = grid[0, :].sum()
+    foot_total = grid.sum()
+    forefoot_ratios.append(round(100 * forefoot / foot_total, 1))
+    rearfoot_ratios.append(round(100 * rearfoot / foot_total, 1))
+    block_labels.append(f"Min {i+1}")
+
+# Charts
+st.subheader("🔀 Symmetry Index Over Time")
+st.line_chart(data=pd.DataFrame({"Symmetry Index": symmetry_scores}, index=block_labels))
+
+st.subheader("📦 Total Load Per Minute")
+st.bar_chart(data=pd.DataFrame({"Total Load": total_loads}, index=block_labels))
+
+st.subheader("🦶 Foot Zone Distribution")
+st.line_chart(data=pd.DataFrame({
+    "Forefoot Load (%)": forefoot_ratios,
+    "Rearfoot Load (%)": rearfoot_ratios
+}, index=block_labels))
+
+# Summary
+st.subheader("📋 Fatigue / Performance Trend Summary")
+drift = round(symmetry_scores[-1] - symmetry_scores[0], 3)
+peak_load = max(total_loads)
+if abs(drift) > 0.05:
+    flag = "⚠️ Asymmetry drift detected across session."
+else:
+    flag = "✅ No significant symmetry drift."
+
+st.markdown(f"""
+- **Symmetry Shift:** {drift:+.3f} ({'Right' if drift > 0 else 'Left' if drift < 0 else 'Stable'})
+- **Max Load:** {int(peak_load):,} CapSense units
+- **{flag}**
+- Consider reviewing forefoot/rearfoot load changes for signs of fatigue or compensation.
+""")
 
     # ✅ Save to Supabase
     if st.button("💾 Save this session to Supabase"):
